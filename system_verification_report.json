@@ -1,13 +1,13 @@
 {
-  "verification_time": "2025-06-19T20:08:52.513162",
+  "verification_time": "2025-06-19T20:36:14.792016",
   "total_checks": 6,
-  "passed_checks": 5,
-  "pass_rate": 83.33333333333334,
-  "status": "良好",
+  "passed_checks": 6,
+  "pass_rate": 100.0,
+  "status": "优秀",
   "results": {
     "项目结构": true,
     "数据库": true,
-    "Python模块": false,
+    "Python模块": true,
     "配置文件": true,
     "脚本文件": true,
     "文档文件": true
