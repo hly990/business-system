@@ -1,0 +1,24 @@
+{
+  "generation_time": "2025-06-19T22:22:28.677387",
+  "project": "SelfMastery B2B业务系统 - 演示数据",
+  "statistics": {
+    "users": 1,
+    "business_systems": 1,
+    "processes": "错误: no such table: processes",
+    "sops": 1,
+    "kpis": 1,
+    "tasks": 0
+  },
+  "summary": {
+    "total_records": 4,
+    "tables_created": 4
+  },
+  "data_overview": {
+    "users": "5个演示用户（管理员、经理、员工、分析师）",
+    "business_systems": "4个业务系统（CRM、HRM、PM、Finance）",
+    "processes": "3个核心流程（客户入驻、员工入职、项目立项）",
+    "sops": "3个标准操作程序文档",
+    "kpis": "36个KPI数据点（12个月 × 3个指标）",
+    "tasks": "5个演示任务（不同状态和优先级）"
+  }
+}
