@@ -204,7 +204,7 @@ class SystemStarter:
             cursor = conn.cursor()
             
             # 检查表是否存在
-            tables = ["users", "business_systems", "processes", "sops", "kpis", "tasks"]
+            tables = ["users", "business_systems", "business_processes", "sops", "kpis", "tasks"]
             existing_tables = []
             
             for table in tables:
@@ -246,7 +246,7 @@ class SystemStarter:
             backend_main = self.project_root / "selfmastery" / "backend" / "main.py"
             self.backend_process = subprocess.Popen([
                 sys.executable, str(backend_main)
-            ], cwd=str(self.project_root / "selfmastery"))
+            ], cwd=str(self.project_root))
             
             backend_details.append("✓ 后端进程已启动")
             self.log("后端进程已启动", "INFO")

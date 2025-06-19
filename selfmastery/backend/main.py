@@ -13,8 +13,8 @@ from pathlib import Path
 from datetime import datetime
 import traceback
 
-from config.settings import get_app_settings
-from config.database import init_async_db
+from selfmastery.config.settings import get_app_settings
+from selfmastery.config.database import init_async_db
 from .api import api_router
 from .utils.exceptions import BaseAPIException
 from .utils.responses import APIResponse, ResponseMessages
