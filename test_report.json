@@ -1,0 +1,53 @@
+{
+  "test_time": "2025-06-19 19:59:57",
+  "project": "SelfMastery B2B业务系统",
+  "results": {
+    "database": {
+      "status": "passed",
+      "details": [
+        "数据库文件: /Users/helingyun/codebase/project/b2b/business-system/data/selfmastery.db",
+        "存在的表: users, business_systems, sops, kpis, tasks",
+        "基本查询操作正常"
+      ]
+    },
+    "backend": {
+      "status": "failed",
+      "details": [
+        "后端测试失败: 后端服务健康检查失败"
+      ]
+    },
+    "frontend": {
+      "status": "passed",
+      "details": [
+        "前端主文件: 存在",
+        "组件文件: 8/8 个存在",
+        "语法检查: 失败: attempted relative import beyond top-level package"
+      ]
+    },
+    "integration": {
+      "status": "passed",
+      "details": [
+        "用户认证流程: 异常: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/auth/register (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x105e8ded0>: Failed to establish a new connection: [Errno 61] Connection refused'))",
+        "业务系统创建: 待实现",
+        "流程管理: 待实现",
+        "SOP文档: 待实现",
+        "KPI数据: 待实现",
+        "任务管理: 待实现"
+      ]
+    },
+    "performance": {
+      "status": "passed",
+      "details": [
+        "数据库查询平均响应时间: 0.01ms",
+        "API平均响应时间: 0.0ms",
+        "内存使用情况: 62.2MB"
+      ]
+    }
+  },
+  "summary": {
+    "total_tests": 5,
+    "passed": 4,
+    "failed": 1,
+    "pending": 0
+  }
+}

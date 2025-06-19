@@ -1,0 +1,583 @@
+"""
+SelfMastery B2B业务系统 - 主窗口类
+"""
+import sys
+import logging
+from PyQt6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
+    QMenuBar, QStatusBar, QToolBar, QDockWidget, QTabWidget,
+    QMessageBox, QProgressBar, QLabel
+)
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSettings
+from PyQt6.QtGui import QAction, QIcon, QKeySequence, QFont
+
+from ..widgets.navigation_tree import NavigationTree
+from ..widgets.system_canvas import SystemCanvas
+from ..widgets.process_editor import ProcessEditor
+from ..widgets.sop_editor import SOPEditor
+from ..widgets.kpi_dashboard import KPIDashboard
+from ..widgets.task_manager import TaskManager
+from ..services.auth_manager import AuthManager
+from ..services.data_manager import DataManager
+from ..ui.auth.login_dialog import LoginDialog
+from ..styles.themes import ThemeManager
+
+
+class MainWindow(QMainWindow):
+    """主窗口类"""
+    
+    # 信号定义
+    user_logged_in = pyqtSignal(dict)  # 用户登录信号
+    user_logged_out = pyqtSignal()     # 用户登出信号
+    data_updated = pyqtSignal(str)     # 数据更新信号
+    
+    def __init__(self):
+        super().__init__()
+        self.logger = logging.getLogger(__name__)
+        self.settings = QSettings('SelfMastery', 'B2BSystem')
+        
+        # 初始化管理器
+        self.auth_manager = AuthManager()
+        self.data_manager = DataManager()
+        self.theme_manager = ThemeManager()
+        
+        # 初始化UI组件
+        self.navigation_tree = None
+        self.system_canvas = None
+        self.process_editor = None
+        self.sop_editor = None
+        self.kpi_dashboard = None
+        self.task_manager = None
+        
+        # 当前用户信息
+        self.current_user = None
+        
+        # 初始化界面
+        self.init_ui()
+        self.setup_connections()
+        self.restore_window_state()
+        
+        # 检查登录状态
+        self.check_login_status()
+        
+    def init_ui(self):
+        """初始化用户界面"""
+        # 设置窗口基本属性
+        self.setWindowTitle("SelfMastery B2B业务系统")
+        self.setMinimumSize(1200, 800)
+        self.resize(1600, 1000)
+        
+        # 设置窗口图标
+        self.setWindowIcon(QIcon(":/icons/app_icon.png"))
+        
+        # 创建中央部件
+        self.setup_central_widget()
+        
+        # 创建菜单栏
+        self.create_menu_bar()
+        
+        # 创建工具栏
+        self.create_tool_bars()
+        
+        # 创建状态栏
+        self.create_status_bar()
+        
+        # 创建停靠窗口
+        self.create_dock_widgets()
+        
+        # 应用主题
+        self.apply_theme()
+        
+    def setup_central_widget(self):
+        """设置中央部件"""
+        # 创建主分割器
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.setCentralWidget(main_splitter)
+        
+        # 左侧导航区域
+        self.navigation_tree = NavigationTree()
+        main_splitter.addWidget(self.navigation_tree)
+        
+        # 右侧工作区域
+        self.work_area = QTabWidget()
+        self.work_area.setTabsClosable(True)
+        self.work_area.setMovable(True)
+        self.work_area.tabCloseRequested.connect(self.close_tab)
+        main_splitter.addWidget(self.work_area)
+        
+        # 设置分割器比例
+        main_splitter.setSizes([300, 1300])
+        
+        # 创建默认标签页
+        self.create_default_tabs()
+        
+    def create_default_tabs(self):
+        """创建默认标签页"""
+        # 系统图谱标签页
+        self.system_canvas = SystemCanvas()
+        self.work_area.addTab(self.system_canvas, "系统图谱")
+        
+        # KPI仪表板标签页
+        self.kpi_dashboard = KPIDashboard()
+        self.work_area.addTab(self.kpi_dashboard, "KPI仪表板")
+        
+        # 任务管理标签页
+        self.task_manager = TaskManager()
+        self.work_area.addTab(self.task_manager, "任务管理")
+        
+    def create_menu_bar(self):
+        """创建菜单栏"""
+        menubar = self.menuBar()
+        
+        # 文件菜单
+        file_menu = menubar.addMenu('文件(&F)')
+        
+        # 新建菜单
+        new_menu = file_menu.addMenu('新建(&N)')
+        
+        new_system_action = QAction('业务系统(&S)', self)
+        new_system_action.setShortcut(QKeySequence('Ctrl+Shift+S'))
+        new_system_action.triggered.connect(self.new_system)
+        new_menu.addAction(new_system_action)
+        
+        new_process_action = QAction('业务流程(&P)', self)
+        new_process_action.setShortcut(QKeySequence('Ctrl+Shift+P'))
+        new_process_action.triggered.connect(self.new_process)
+        new_menu.addAction(new_process_action)
+        
+        new_sop_action = QAction('SOP文档(&O)', self)
+        new_sop_action.setShortcut(QKeySequence('Ctrl+Shift+O'))
+        new_sop_action.triggered.connect(self.new_sop)
+        new_menu.addAction(new_sop_action)
+        
+        file_menu.addSeparator()
+        
+        # 导入导出
+        import_action = QAction('导入(&I)', self)
+        import_action.triggered.connect(self.import_data)
+        file_menu.addAction(import_action)
+        
+        export_action = QAction('导出(&E)', self)
+        export_action.triggered.connect(self.export_data)
+        file_menu.addAction(export_action)
+        
+        file_menu.addSeparator()
+        
+        # 退出
+        exit_action = QAction('退出(&X)', self)
+        exit_action.setShortcut(QKeySequence('Ctrl+Q'))
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        
+        # 编辑菜单
+        edit_menu = menubar.addMenu('编辑(&E)')
+        
+        undo_action = QAction('撤销(&U)', self)
+        undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        undo_action.triggered.connect(self.undo)
+        edit_menu.addAction(undo_action)
+        
+        redo_action = QAction('重做(&R)', self)
+        redo_action.setShortcut(QKeySequence.StandardKey.Redo)
+        redo_action.triggered.connect(self.redo)
+        edit_menu.addAction(redo_action)
+        
+        edit_menu.addSeparator()
+        
+        copy_action = QAction('复制(&C)', self)
+        copy_action.setShortcut(QKeySequence.StandardKey.Copy)
+        copy_action.triggered.connect(self.copy)
+        edit_menu.addAction(copy_action)
+        
+        paste_action = QAction('粘贴(&P)', self)
+        paste_action.setShortcut(QKeySequence.StandardKey.Paste)
+        paste_action.triggered.connect(self.paste)
+        edit_menu.addAction(paste_action)
+        
+        # 视图菜单
+        view_menu = menubar.addMenu('视图(&V)')
+        
+        # 主题切换
+        theme_menu = view_menu.addMenu('主题(&T)')
+        
+        light_theme_action = QAction('浅色主题(&L)', self)
+        light_theme_action.triggered.connect(lambda: self.change_theme('light'))
+        theme_menu.addAction(light_theme_action)
+        
+        dark_theme_action = QAction('深色主题(&D)', self)
+        dark_theme_action.triggered.connect(lambda: self.change_theme('dark'))
+        theme_menu.addAction(dark_theme_action)
+        
+        view_menu.addSeparator()
+        
+        # 全屏
+        fullscreen_action = QAction('全屏(&F)', self)
+        fullscreen_action.setShortcut(QKeySequence('F11'))
+        fullscreen_action.triggered.connect(self.toggle_fullscreen)
+        view_menu.addAction(fullscreen_action)
+        
+        # 工具菜单
+        tools_menu = menubar.addMenu('工具(&T)')
+        
+        settings_action = QAction('设置(&S)', self)
+        settings_action.triggered.connect(self.open_settings)
+        tools_menu.addAction(settings_action)
+        
+        # 帮助菜单
+        help_menu = menubar.addMenu('帮助(&H)')
+        
+        help_action = QAction('帮助文档(&H)', self)
+        help_action.setShortcut(QKeySequence('F1'))
+        help_action.triggered.connect(self.show_help)
+        help_menu.addAction(help_action)
+        
+        about_action = QAction('关于(&A)', self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+        
+    def create_tool_bars(self):
+        """创建工具栏"""
+        # 主工具栏
+        main_toolbar = self.addToolBar('主工具栏')
+        main_toolbar.setObjectName('main_toolbar')
+        
+        # 新建按钮
+        new_system_action = QAction(QIcon(':/icons/new_system.png'), '新建系统', self)
+        new_system_action.triggered.connect(self.new_system)
+        main_toolbar.addAction(new_system_action)
+        
+        new_process_action = QAction(QIcon(':/icons/new_process.png'), '新建流程', self)
+        new_process_action.triggered.connect(self.new_process)
+        main_toolbar.addAction(new_process_action)
+        
+        main_toolbar.addSeparator()
+        
+        # 保存按钮
+        save_action = QAction(QIcon(':/icons/save.png'), '保存', self)
+        save_action.setShortcut(QKeySequence.StandardKey.Save)
+        save_action.triggered.connect(self.save)
+        main_toolbar.addAction(save_action)
+        
+        main_toolbar.addSeparator()
+        
+        # 视图控制按钮
+        zoom_in_action = QAction(QIcon(':/icons/zoom_in.png'), '放大', self)
+        zoom_in_action.triggered.connect(self.zoom_in)
+        main_toolbar.addAction(zoom_in_action)
+        
+        zoom_out_action = QAction(QIcon(':/icons/zoom_out.png'), '缩小', self)
+        zoom_out_action.triggered.connect(self.zoom_out)
+        main_toolbar.addAction(zoom_out_action)
+        
+        zoom_fit_action = QAction(QIcon(':/icons/zoom_fit.png'), '适应窗口', self)
+        zoom_fit_action.triggered.connect(self.zoom_fit)
+        main_toolbar.addAction(zoom_fit_action)
+        
+    def create_status_bar(self):
+        """创建状态栏"""
+        self.status_bar = self.statusBar()
+        
+        # 状态标签
+        self.status_label = QLabel('就绪')
+        self.status_bar.addWidget(self.status_label)
+        
+        # 进度条
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.status_bar.addPermanentWidget(self.progress_bar)
+        
+        # 用户信息标签
+        self.user_label = QLabel('未登录')
+        self.status_bar.addPermanentWidget(self.user_label)
+        
+    def create_dock_widgets(self):
+        """创建停靠窗口"""
+        # 属性面板
+        self.properties_dock = QDockWidget('属性', self)
+        self.properties_dock.setObjectName('properties_dock')
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.properties_dock)
+        
+        # 输出面板
+        self.output_dock = QDockWidget('输出', self)
+        self.output_dock.setObjectName('output_dock')
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.output_dock)
+        
+    def setup_connections(self):
+        """设置信号连接"""
+        # 认证管理器信号
+        self.auth_manager.login_success.connect(self.on_login_success)
+        self.auth_manager.login_failed.connect(self.on_login_failed)
+        self.auth_manager.logout_success.connect(self.on_logout_success)
+        
+        # 数据管理器信号
+        self.data_manager.data_loaded.connect(self.on_data_loaded)
+        self.data_manager.data_saved.connect(self.on_data_saved)
+        self.data_manager.error_occurred.connect(self.on_error_occurred)
+        
+        # 导航树信号
+        if self.navigation_tree:
+            self.navigation_tree.item_selected.connect(self.on_navigation_item_selected)
+            self.navigation_tree.item_double_clicked.connect(self.on_navigation_item_double_clicked)
+        
+    def apply_theme(self):
+        """应用主题"""
+        current_theme = self.settings.value('theme', 'light')
+        self.theme_manager.apply_theme(self, current_theme)
+        
+    def check_login_status(self):
+        """检查登录状态"""
+        if not self.auth_manager.is_logged_in():
+            self.show_login_dialog()
+        else:
+            self.current_user = self.auth_manager.get_current_user()
+            self.update_user_info()
+            
+    def show_login_dialog(self):
+        """显示登录对话框"""
+        login_dialog = LoginDialog(self)
+        if login_dialog.exec() == login_dialog.DialogCode.Accepted:
+            # 登录成功，更新界面
+            self.current_user = self.auth_manager.get_current_user()
+            self.update_user_info()
+        else:
+            # 登录取消，退出应用
+            self.close()
+            
+    def update_user_info(self):
+        """更新用户信息显示"""
+        if self.current_user:
+            self.user_label.setText(f"用户: {self.current_user.get('name', '未知')}")
+        else:
+            self.user_label.setText('未登录')
+            
+    def restore_window_state(self):
+        """恢复窗口状态"""
+        geometry = self.settings.value('geometry')
+        if geometry:
+            self.restoreGeometry(geometry)
+            
+        state = self.settings.value('windowState')
+        if state:
+            self.restoreState(state)
+            
+    def save_window_state(self):
+        """保存窗口状态"""
+        self.settings.setValue('geometry', self.saveGeometry())
+        self.settings.setValue('windowState', self.saveState())
+        
+    # 槽函数实现
+    def on_login_success(self, user_data):
+        """登录成功处理"""
+        self.current_user = user_data
+        self.update_user_info()
+        self.status_label.setText('登录成功')
+        self.user_logged_in.emit(user_data)
+        
+    def on_login_failed(self, error_msg):
+        """登录失败处理"""
+        QMessageBox.warning(self, '登录失败', error_msg)
+        
+    def on_logout_success(self):
+        """登出成功处理"""
+        self.current_user = None
+        self.update_user_info()
+        self.status_label.setText('已登出')
+        self.user_logged_out.emit()
+        self.show_login_dialog()
+        
+    def on_data_loaded(self, data_type):
+        """数据加载完成处理"""
+        self.status_label.setText(f'{data_type}数据加载完成')
+        
+    def on_data_saved(self, data_type):
+        """数据保存完成处理"""
+        self.status_label.setText(f'{data_type}数据保存完成')
+        
+    def on_error_occurred(self, error_msg):
+        """错误处理"""
+        QMessageBox.critical(self, '错误', error_msg)
+        
+    def on_navigation_item_selected(self, item_data):
+        """导航项选择处理"""
+        # 根据选择的项目类型打开相应的编辑器
+        item_type = item_data.get('type')
+        if item_type == 'system':
+            self.open_system_editor(item_data)
+        elif item_type == 'process':
+            self.open_process_editor(item_data)
+        elif item_type == 'sop':
+            self.open_sop_editor(item_data)
+            
+    def on_navigation_item_double_clicked(self, item_data):
+        """导航项双击处理"""
+        self.on_navigation_item_selected(item_data)
+        
+    # 菜单动作实现
+    def new_system(self):
+        """新建业务系统"""
+        # 在系统画布中创建新系统
+        if self.system_canvas:
+            self.system_canvas.create_new_system()
+            
+    def new_process(self):
+        """新建业务流程"""
+        # 打开流程编辑器
+        self.open_process_editor()
+        
+    def new_sop(self):
+        """新建SOP文档"""
+        # 打开SOP编辑器
+        self.open_sop_editor()
+        
+    def open_system_editor(self, system_data=None):
+        """打开系统编辑器"""
+        # 切换到系统图谱标签页
+        for i in range(self.work_area.count()):
+            if self.work_area.tabText(i) == "系统图谱":
+                self.work_area.setCurrentIndex(i)
+                break
+                
+    def open_process_editor(self, process_data=None):
+        """打开流程编辑器"""
+        # 创建新的流程编辑器标签页
+        process_editor = ProcessEditor(process_data)
+        tab_name = f"流程编辑 - {process_data.get('name', '新流程') if process_data else '新流程'}"
+        index = self.work_area.addTab(process_editor, tab_name)
+        self.work_area.setCurrentIndex(index)
+        
+    def open_sop_editor(self, sop_data=None):
+        """打开SOP编辑器"""
+        # 创建新的SOP编辑器标签页
+        sop_editor = SOPEditor(sop_data)
+        tab_name = f"SOP编辑 - {sop_data.get('title', '新文档') if sop_data else '新文档'}"
+        index = self.work_area.addTab(sop_editor, tab_name)
+        self.work_area.setCurrentIndex(index)
+        
+    def close_tab(self, index):
+        """关闭标签页"""
+        if index > 2:  # 保护默认标签页
+            self.work_area.removeTab(index)
+            
+    def save(self):
+        """保存当前文档"""
+        current_widget = self.work_area.currentWidget()
+        if hasattr(current_widget, 'save'):
+            current_widget.save()
+            
+    def undo(self):
+        """撤销操作"""
+        current_widget = self.work_area.currentWidget()
+        if hasattr(current_widget, 'undo'):
+            current_widget.undo()
+            
+    def redo(self):
+        """重做操作"""
+        current_widget = self.work_area.currentWidget()
+        if hasattr(current_widget, 'redo'):
+            current_widget.redo()
+            
+    def copy(self):
+        """复制操作"""
+        current_widget = self.work_area.currentWidget()
+        if hasattr(current_widget, 'copy'):
+            current_widget.copy()
+            
+    def paste(self):
+        """粘贴操作"""
+        current_widget = self.work_area.currentWidget()
+        if hasattr(current_widget, 'paste'):
+            current_widget.paste()
+            
+    def zoom_in(self):
+        """放大视图"""
+        current_widget = self.work_area.currentWidget()
+        if hasattr(current_widget, 'zoom_in'):
+            current_widget.zoom_in()
+            
+    def zoom_out(self):
+        """缩小视图"""
+        current_widget = self.work_area.currentWidget()
+        if hasattr(current_widget, 'zoom_out'):
+            current_widget.zoom_out()
+            
+    def zoom_fit(self):
+        """适应窗口"""
+        current_widget = self.work_area.currentWidget()
+        if hasattr(current_widget, 'zoom_fit'):
+            current_widget.zoom_fit()
+            
+    def change_theme(self, theme_name):
+        """切换主题"""
+        self.theme_manager.apply_theme(self, theme_name)
+        self.settings.setValue('theme', theme_name)
+        
+    def toggle_fullscreen(self):
+        """切换全屏模式"""
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+            
+    def import_data(self):
+        """导入数据"""
+        QMessageBox.information(self, '提示', '导入功能正在开发中...')
+        
+    def export_data(self):
+        """导出数据"""
+        QMessageBox.information(self, '提示', '导出功能正在开发中...')
+        
+    def open_settings(self):
+        """打开设置"""
+        QMessageBox.information(self, '提示', '设置功能正在开发中...')
+        
+    def show_help(self):
+        """显示帮助"""
+        QMessageBox.information(self, '帮助', '帮助文档正在开发中...')
+        
+    def show_about(self):
+        """显示关于对话框"""
+        QMessageBox.about(self, '关于', 
+                         'SelfMastery B2B业务系统\n'
+                         '版本: 1.0.0\n'
+                         '一个专业的业务流程管理系统')
+        
+    def closeEvent(self, event):
+        """关闭事件处理"""
+        # 保存窗口状态
+        self.save_window_state()
+        
+        # 检查是否有未保存的更改
+        if self.has_unsaved_changes():
+            reply = QMessageBox.question(
+                self, '确认退出',
+                '有未保存的更改，确定要退出吗？',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.No:
+                event.ignore()
+                return
+                
+        # 清理资源
+        self.cleanup()
+        event.accept()
+        
+    def has_unsaved_changes(self):
+        """检查是否有未保存的更改"""
+        # 检查所有打开的编辑器
+        for i in range(self.work_area.count()):
+            widget = self.work_area.widget(i)
+            if hasattr(widget, 'has_unsaved_changes') and widget.has_unsaved_changes():
+                return True
+        return False
+        
+    def cleanup(self):
+        """清理资源"""
+        # 断开数据库连接
+        if self.data_manager:
+            self.data_manager.cleanup()
+            
+        # 保存用户设置
+        self.settings.sync()
+        
+        self.logger.info("应用程序正常退出")

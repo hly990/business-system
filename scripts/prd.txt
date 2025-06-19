@@ -1,47 +1,107 @@
 <context>
 # Overview  
-[Provide a high-level overview of your product here. Explain what problem it solves, who it's for, and why it's valuable.]
+SelfMastery 是一款为中小企业创始人量身打造的 **自动化商业系统**。它通过系统化梳理业务流程、权责分配与授权、SOP 标准化以及数据驱动的 KPI 监控，帮助企业摆脱“创始人亲力亲为”与“日常救火”的困境，让公司像自我运转的生命体一样高效运行。  
 
-# Core Features  
-[List and describe the main features of your product. For each feature, include:
-- What it does
-- Why it's important
-- How it works at a high level]
+* **解决的核心问题**：缺乏系统化运作、权责不清、创始人成为瓶颈。
+* **目标用户**：处于 5–200 人规模、希望突破增长瓶颈的企业创始人及中高层管理者。
+* **产品价值**：将零散的任务清单转化为可视化业务系统图谱，配合标准化流程与授权机制，实现人员替换不掉链、持续规模化增长。
 
-# User Experience  
-[Describe the user journey and experience. Include:
-- User personas
-- Key user flows
-- UI/UX considerations]
-</context>
+# Core Features
+
+| 功能            | 作用                  | 重要性          | 高层工作原理               |
+| ------------- | ------------------- | ------------ | -------------------- |
+| **业务系统图谱**    | 将任务按职能可视化为流程图       | 明确价值链与瓶颈     | 拖拽式白板 + 图算法自动排序      |
+| **权责分配中心**    | 为每条流程/系统指定唯一负责人     | 避免多头负责，提高执行力 | 负责人唯一性校验＋层级汇报关系生成    |
+| **授权管理**      | 支持一次性或阶段性授权，附带资源与权限 | 创始人逐步抽离      | 任务与权限打包，设置交接里程碑      |
+| **SOP 编辑器**   | 文档化标准操作流程，支持多媒体     | 知识资产化＆快速培训   | Markdown + 富媒体 + 模板库 |
+| **KPI 仪表盘**   | 以数据驱动系统优化           | 持续改进与异常预警    | 数据接口抓取＋可视化组件         |
+| **行动清单 & 提醒** | 按阶段自动生成行动计划         | 确保落地         | 依任务状态触发提醒（邮件/IM）     |
+
+# User Experience
+
+* **用户角色**
+
+  * 创始人/CEO：系统架构师，配置全局结构与授权。
+  * 系统负责人（如营销经理）：维护本职能的流程与 KPI。
+  * 流程负责人／执行者：依据 SOP 执行具体任务并反馈数据。
+
+* **关键用户流程**
+
+  1. **首次启动 → 向导式业务系统梳理**：用户通过问答选择行业模板，导入或新建流程节点。
+  2. **权责分配 → 拖拽分派负责人**：所有节点必须“变绿”才能进入下一步。
+  3. **SOP 录入 → 模板+AI 辅助生成**：快速生成文档并插入示例视频。
+  4. **KPI 绑定 → 数据源配置**：选择表单、CRM 或手动输入，实时点亮仪表盘。
+  5. **授权发布 → 行动清单生成 & 提醒**：系统根据里程碑自动推送待办。
+
+* **UI/UX 考量**
+
+  * PyQt6 桌面端，左右分栏：左侧系统树 / 右侧详细编辑区；可折叠大纲提升信息密度。
+  * 统一深蓝+亮橙配色，高对比度突出责任归属状态。
+  * 拖拽、右键快捷菜单、键盘快捷键，加快专业用户操作速度。
+
+    </context>
+
 <PRD>
 # Technical Architecture  
-[Outline the technical implementation details:
-- System components
-- Data models
-- APIs and integrations
-- Infrastructure requirements]
+- **系统组件**  
+  1. **Frontend (PyQt6)**：负责 UI 交互、绘图白板、报表展示。  
+  2. **Backend (Python FastAPI 本地服务)**：业务逻辑、权限校验、任务调度。  
+  3. **Data Layer**：PostgreSQL（结构化：用户、流程、任务、KPI）、SQLite（离线单机模式），SQLAlchemy ORM。  
+  4. **Automation Engine**：Celery + Redis，用于提醒、KPI 数据抓取与授权里程碑调度。  
+  5. **Integration Layer**：REST / Webhook 适配常见工具（邮箱、Slack/钉钉、Google Sheet、CRM）。  
+  6. **Plugin SDK**：允许第三方编写数据源或报表插件（基于 EntryPoint）。  
 
-# Development Roadmap  
-[Break down the development process into phases:
-- MVP requirements
-- Future enhancements
-- Do not think about timelines whatsoever -- all that matters is scope and detailing exactly what needs to be build in each phase so it can later be cut up into tasks]
+* **数据模型 (核心表)**
+
+  * **User**(id, name, role, email, timezone)
+  * **FunctionSystem**(id, name, owner\_id)
+  * **Process**(id, system\_id, name, owner\_id, sop\_id)
+  * **Task**(id, process\_id, title, status, due\_date)
+  * **SOP**(id, markdown, media\_refs, version)
+  * **KPI**(id, process\_id, metric, target, current\_value, source)
+
+* **API & 接口**
+
+  * `/systems` CRUD
+  * `/processes` CRUD
+  * `/sop/ai_generate`（调用 LLM 提供草稿）
+  * `/kpi/push` & Webhook
+
+* **基础设施**
+
+  * 单机部署：Python + PyQt6 可执行文件；本地 Postgres（或远程连接）。
+  * 云部署（可选）：Docker Compose + Nginx + Gunicorn + PostgreSQL。
+
+# Development Roadmap
+
+| 阶段          | 交付范围                                              |
+| ----------- | ------------------------------------------------- |
+| **MVP**     | 系统图谱构建、负责人唯一分配、SOP 富文本编辑器、本地 SQLite 存储、基础提醒（本地通知） |
+| **Phase 2** | KPI 模块、外部数据源集成、邮件／Slack 推送、Celery 调度器             |
+| **Phase 3** | 权限细粒度控制、云同步、模板市场（流程 & SOP）、LLM AI 助手（分析瓶颈与建议）     |
+| **Phase 4** | 多企业 SaaS 模式、插件 SDK + 商店、BI 报表自定义、大屏监控             |
 
 # Logical Dependency Chain
-[Define the logical order of development:
-- Which features need to be built first (foundation)
-- Getting as quickly as possible to something usable/visible front end that works
-- Properly pacing and scoping each feature so it is atomic but can also be built upon and improved as development approaches]
 
-# Risks and Mitigations  
-[Identify potential risks and how they'll be addressed:
-- Technical challenges
-- Figuring out the MVP that we can build upon
-- Resource constraints]
+1. **核心数据模型 & 本地存储**
+2. **PyQt6 基础 UI 框架**
+3. **系统图谱绘制**（依赖 UI + 模型）
+4. **负责人唯一性校验 & 授权逻辑**
+5. **SOP 编辑器 & 版本控制**
+6. **提醒与调度**（依赖 Celery & Redis）
+7. **KPI 数据接口 & 可视化**
+8. **外部集成 & 插件 SDK**
 
-# Appendix  
-[Include any additional information:
-- Research findings
-- Technical specifications]
-</PRD>
+# Risks and Mitigations
+
+* **技术复杂度**：图形白板及拖拽操作在 PyQt6 中实现难度较高 → 采用开源 QGraphicsView 白板框架并二次封装。
+* **数据安全**：权限与授权不当导致敏感数据泄露 → 角色分级 + 行级权限 + 本地加密配置。
+* **用户学习曲线**：系统化概念抽象 → 内置行业模板 + 上手向导 + 嵌入式帮助。
+* **资源约束**：小团队开发 → 明确 MVP 边界、采用成熟组件（Celery、FastAPI）。
+
+# Appendix
+
+* **研究来源**：E-Myth、Traction、Scaling Up 等系统化运营框架。
+* **AI 生成 SOP Prompt 模板**、示例行业流程图谱 PSD 资源链接待补充。
+
+  </PRD>
