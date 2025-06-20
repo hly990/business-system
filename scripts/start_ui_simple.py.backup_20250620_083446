@@ -280,7 +280,7 @@ try:
     
     # 创建应用
     app = QApplication(sys.argv)
-    app.setApplicationName("SelfMastery 自动化业务系统")
+    app.setApplicationName("SelfMastery B2B业务系统")
     app.setApplicationVersion("1.0.0")
     
     # 设置全局样式

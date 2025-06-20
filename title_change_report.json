@@ -1,0 +1,44 @@
+{
+  "task": "窗口标题修改",
+  "new_title": "SelfMastery 自动化业务系统",
+  "total_locations": 4,
+  "successful_changes": 4,
+  "failed_changes": 0,
+  "changes_made": [
+    {
+      "file": "selfmastery/frontend/ui/main_window.py",
+      "line": 62,
+      "old": "self.setWindowTitle(\"SelfMastery 自动化业务系统\")",
+      "new": "self.setWindowTitle(\"SelfMastery 自动化业务系统\")",
+      "timestamp": "2025-06-20T08:34:46.900773"
+    },
+    {
+      "file": "scripts/start_ui_simple.py",
+      "line": 110,
+      "old": "self.setWindowTitle(\"SelfMastery B2B业务系统\")",
+      "new": "self.setWindowTitle(\"SelfMastery 自动化业务系统\")",
+      "timestamp": "2025-06-20T08:34:46.902186"
+    },
+    {
+      "file": "scripts/start_ui_simple.py",
+      "line": 122,
+      "old": "title_label = QLabel(\"SelfMastery B2B业务系统\")",
+      "new": "title_label = QLabel(\"SelfMastery 自动化业务系统\")",
+      "timestamp": "2025-06-20T08:34:46.902993"
+    },
+    {
+      "file": "scripts/start_ui_simple.py",
+      "line": 282,
+      "old": "app.setApplicationName(\"SelfMastery B2B业务系统\")",
+      "new": "app.setApplicationName(\"SelfMastery 自动化业务系统\")",
+      "timestamp": "2025-06-20T08:34:46.904327"
+    }
+  ],
+  "backup_files": [
+    "selfmastery/frontend/ui/main_window.py.backup_20250620_083446",
+    "scripts/start_ui_simple.py.backup_20250620_083446",
+    "scripts/start_ui_simple.py.backup_20250620_083446",
+    "scripts/start_ui_simple.py.backup_20250620_083446"
+  ],
+  "timestamp": "2025-06-20T08:34:46.904344"
+}
